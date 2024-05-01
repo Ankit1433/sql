@@ -1,0 +1,239 @@
+--trigger 
+--CREATE TABLE production.product_audits(
+--    change_id INT IDENTITY PRIMARY KEY,
+--    product_id INT NOT NULL,
+--    product_name VARCHAR(255) NOT NULL,
+--    brand_id INT NOT NULL,
+--    category_id INT NOT NULL,
+--    model_year SMALLINT NOT NULL,
+--    list_price DEC(10,2) NOT NULL,
+--    updated_at DATETIME NOT NULL,
+--    operation CHAR(3) NOT NULL,
+--    CHECK(operation = 'INS' or operation='DEL')
+--)
+--select * from production.products
+--delete from production.products where product_id='10'
+--insert into production.products values('Trek 820 - 2016',9	,6,	2016	,379.99)
+--update production.products set list_price=400 where product_id=331
+--go
+--select * from production.product_audits
+
+--alter trigger production.trg_product_audit
+--on production.products
+--after insert,delete
+--as
+--begin
+--	insert into production.product_audits(
+	--	product_id, 
+--	product_name,
+--	brand_id, 
+--	category_id, 
+--	model_year, 
+--	list_price, 
+--	updated_at, 
+--	operation 
+--	)
+--	select 
+--		i.product_id,
+--		product_name,
+--		brand_id,
+--		category_id,
+--		model_year,
+--		i.list_price,
+--		GETDATE(),
+--		'ins'
+--		from inserted i
+--		union all
+--		select 
+--		d.product_id,
+--		product_name,
+--		brand_id,
+--		category_id,
+--		model_year,
+--		d.list_price,
+--		GETDATE(),
+--		'del'
+--		from deleted d
+--		end
+--go
+--ALTER TRIGGER production.trg_product_audit 
+--ON production.products 
+--AFTER INSERT, DELETE, UPDATE 
+--AS 
+--BEGIN 
+--    IF EXISTS(SELECT * FROM inserted) 
+--    BEGIN 
+--        INSERT INTO production.product_audits (
+--            product_id, 
+--            product_name, 
+--            brand_id, 
+--            category_id, 
+--            model_year, 
+--            list_price, 
+--            updated_at, 
+--            operation
+--        )
+--        SELECT 
+--            i.product_id, 
+--            i.product_name, 
+--            i.brand_id, 
+--            i.category_id, 
+--            i.model_year, 
+--            i.list_price, 
+--            GETDATE(), 
+--            CASE 
+--                WHEN d.product_id IS NULL THEN 'INS' -- Insert operation
+--                ELSE 'UPD' -- Update operation
+--            END 
+--        FROM inserted i
+--        LEFT JOIN deleted d ON i.product_id = d.product_id
+--    END 
+--    IF EXISTS(SELECT * FROM deleted) 
+--    BEGIN 
+--        INSERT INTO production.product_audits (
+--            product_id, 
+--            product_name, 
+--            brand_id, 
+--            category_id, 
+--            model_year, 
+--            list_price, 
+--            updated_at, 
+--            operation
+--        )
+--        SELECT 
+--            d.product_id, 
+--            d.product_name, 
+--            d.brand_id, 
+--            d.category_id, 
+--            d.model_year, 
+--            d.list_price, 
+--            GETDATE(), 
+--            'DEL' -- Delete operation
+--        FROM deleted d
+--        LEFT JOIN inserted i ON i.product_id = d.product_id
+--        WHERE i.product_id IS NULL -- Only insert if not updated
+--    END 
+--END
+
+--ALTER TABLE production.product_audits
+--DROP CONSTRAINT CK__product_a__opera__32AB8735; -- Drop the existing constraint
+ 
+--ALTER TABLE production.product_audits
+--ADD CONSTRAINT CK__product_a__operation
+--CHECK(operation IN ('INS', 'DEL', 'UPD')); 
+
+
+
+--select * from sales.orders
+--select * from sales.order_items
+--create table sales.orders_history
+--( 
+--hist_idno int identity not null,
+--hist_datetime datetime2 default getdate(),
+--[order_id] [int],
+--	[customer_id] [int],
+--	[order_status] [tinyint],
+--	[order_date] [date],
+--	[required_date] [date],
+--	[shipped_date] [date],
+--	[store_id] [int],
+--	[staff_id] [int],
+--	[item_id] [int],
+--	[product_id] [int],
+--	[quantity] [int],
+--	[list_price] [decimal](10, 2),
+--	[discount] [decimal](4, 2),
+--	operation_remark varchar(8),
+--	primary key (hist_idno)
+--);
+--select * from sales.orders_history
+
+----assignment 2 practice
+--create trigger sales.insupdel_trigg
+--on sales.orders
+--after insert,update,delete
+--as
+--begin
+--if exists(select * from inserted) and exists(select * from deleted)
+--insert into sales.orders_history(
+--[order_id],
+--	[customer_id],
+--	[order_status],
+--	[order_date],
+--	[required_date],
+--	[shipped_date],
+--	[store_id],
+--	[staff_id],
+--	[operation_remark])
+--	select 	[order_id],
+--	[customer_id],
+--	[order_status],
+--	[order_date],
+--	[required_date],
+--	[shipped_date],
+--	[store_id],
+--	[staff_id],
+--	'UPDATED'
+--	From inserted 
+--else if exists (select * from inserted)
+--	insert into sales.orders_history(
+--[order_id],
+--	[customer_id],
+--	[order_status],
+--	[order_date],
+--	[required_date],
+--	[shipped_date],
+--	[store_id],
+--	[staff_id],
+--	[operation_remark])
+	
+--	select 	[order_id],
+--	[customer_id],
+--	[order_status],
+--	[order_date],
+--	[required_date],
+--	[shipped_date],
+--	[store_id],
+--	[staff_id],
+--	'inserted'
+--	From inserted 
+--else
+--INSERT INTO [sales].[orders_history](
+--	[order_id],
+--	[customer_id],
+--	[order_status],
+--	[order_date],
+--	[required_date],
+--	[shipped_date],
+--	[store_id],
+--	[staff_id],
+--	[operation_remark])
+--	select 	[order_id],
+--	[customer_id],
+--	[order_status],
+--	[order_date],
+--	[required_date],
+--	[shipped_date],
+--	[store_id],
+--	[staff_id],
+--	'Delete'
+--	From deleted
+--	end
+
+--	insert into sales.orders values(54,1,'2012-10-01','2019-01-07','2020-08-11',2,6)
+--	select * from sales.orders_history
+
+
+select distinct * from sales.orders 
+
+SELECT * from sales.orders
+
+-- pivot
+-/*
+unpivot procedure trigger
+
+*/
+
+
+
+
